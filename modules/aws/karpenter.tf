@@ -24,7 +24,6 @@ locals {
 
   values_karpenter = <<-VALUES
     settings:
-      aws:
         enablePodENI: true
     controller:
       resources:
@@ -79,12 +78,14 @@ module "karpenter" {
     KarpeneterAdditional         = local.karpenter["enabled"] ? aws_iam_policy.karpenter_additional[0].arn : ""
   }
 
-  iam_role_use_name_prefix        = false
+  iam_role_use_name_prefix        = true
   irsa_oidc_provider_arn          = local.karpenter["irsa_oidc_provider_arn"]
   irsa_namespace_service_accounts = local.karpenter["irsa_namespace_service_accounts"]
+  enable_irsa                     = true
 
-  create_iam_role = false
-  iam_role_name   = local.karpenter["iam_role_name"]
+  create_instance_profile = true
+  create_iam_role = true
+  create_node_iam_role = true
 
   tags = local.tags
 }
@@ -131,8 +132,23 @@ resource "helm_release" "karpenter" {
   namespace = local.karpenter["create_ns"] ? kubernetes_namespace.karpenter.*.metadata.0.name[count.index] : local.karpenter["namespace"]
 
   set {
-    name  = "settings.aws.clusterName"
+    name  = "serviceMonitor.enabled"
+    value = "True"
+  }
+
+  set {
+    name  = "settings.clusterName"
     value = var.cluster-name
+  }
+
+  set {
+    name  = "settings.clusterEndpoint"
+    value = var.eks.cluster_endpoint
+  }
+
+  set {
+    name  = "settings.featureGates.drift"
+    value = "True"
   }
 
   set {
@@ -141,12 +157,12 @@ resource "helm_release" "karpenter" {
   }
 
   set {
-    name  = "settings.aws.defaultInstanceProfile"
+    name  = "settings.defaultInstanceProfile"
     value = module.karpenter.instance_profile_name
   }
 
   set {
-    name  = "settings.aws.interruptionQueueName"
+    name  = "settings.interruptionQueueName"
     value = module.karpenter.queue_name
   }
 
@@ -259,6 +275,158 @@ resource "kubernetes_network_policy" "karpenter_allow_control_plane" {
 
     policy_types = ["Ingress"]
   }
+}
+
+resource "kubectl_manifest" "karpenter_spot_pool" {
+  count = local.karpenter["enabled"] && local.karpenter["spot_pool"] ? 1 : 0
+
+  yaml_body = <<-YAML
+    apiVersion: karpenter.sh/v1
+    kind: NodePool
+    metadata:
+      name: spot
+    spec:
+      disruption:
+        consolidationPolicy: WhenEmptyOrUnderutilized
+        consolidateAfter: 1m
+      limits:
+        cpu: 100
+      template:
+        spec:
+          requirements:
+            - key: kubernetes.io/arch
+              operator: In
+              values: ["amd64"]
+            - key: kubernetes.io/os
+              operator: In
+              values: ["linux"]
+            - key: karpenter.sh/capacity-type
+              operator: In
+              values: ["spot"]     
+            - key: karpenter.k8s.aws/instance-category
+              operator: In
+              values:
+              - c
+              - m
+              - r
+            - key: karpenter.k8s.aws/instance-generation
+              operator: Gt
+              values:
+              - "2"
+          nodeClassRef:
+            name: default
+            group: karpenter.k8s.aws
+            kind: EC2NodeClass
+          tags:
+            Name: "karpenter-spot-${var.cluster-name}"
+          expireAfter: 720h
+
+YAML
+  depends_on = [
+    helm_release.karpenter
+  ]
+}
+
+resource "kubectl_manifest" "karpenter_on_demand_pool" {
+  count = local.karpenter["enabled"] && local.karpenter["on_demand_pool"] ? 1 : 0
+
+  yaml_body = <<-YAML
+    apiVersion: karpenter.sh/v1
+    kind: NodePool
+    metadata:
+      name: stage-on-demand
+    spec:
+      disruption:
+        budgets:
+        - nodes: "20%"
+          reasons:
+            - "Underutilized"
+        consolidationPolicy: WhenEmptyOrUnderutilized
+        consolidateAfter: 30m
+      limits:
+        cpu: 250
+      template:
+        spec:
+          nodeClassRef:
+            name: default
+            group: karpenter.k8s.aws
+            kind: EC2NodeClass
+          requirements:
+            - key: kubernetes.io/arch
+              operator: In
+              values: ["amd64"]
+            - key: kubernetes.io/os
+              operator: In
+              values: ["linux"]
+            - key: karpenter.sh/capacity-type
+              operator: In
+              values: ["on-demand"]     
+            - key: karpenter.k8s.aws/instance-category
+              operator: In
+              values:
+              - c
+              - m
+              - r
+            - key: karpenter.k8s.aws/instance-generation
+              operator: Gt
+              values:
+              - "2"
+          nodeClassRef:
+            name: default
+            group: karpenter.k8s.aws
+            kind: EC2NodeClass
+          tags:
+            Name: "karpenter-on-demand-${var.cluster-name}"
+          expireAfter: 168h
+
+YAML
+  depends_on = [
+    helm_release.karpenter
+  ]
+}
+
+resource "kubectl_manifest" "karpenter_node_class" {
+  count = local.karpenter["enabled"] ? 1 : 0
+
+  yaml_body = <<-YAML
+    apiVersion: karpenter.k8s.aws/v1
+    kind: EC2NodeClass
+    metadata:
+      name: default
+    spec:
+      amiFamily: "${local.karpenter["ami_family"]}"
+      role: ${module.karpenter.node_iam_role_name}
+      amiSelectorTerms:
+        - id: "${local.karpenter["ami_id"]}"
+      blockDeviceMappings:
+        # Root device
+        - deviceName: /dev/xvda
+          ebs:
+            volumeSize: 4Gi
+            volumeType: gp3
+            encrypted: true
+        # Data device: Container resources such as images and logs
+        - deviceName: /dev/xvdb
+          ebs:
+            volumeSize: 50Gi
+            volumeType: gp3
+            encrypted: true
+      subnetSelectorTerms:
+        - tags:
+            karpenter.sh/discovery: ${var.cluster-name}
+      securityGroupSelectorTerms:
+        - tags:
+            karpenter.sh/discovery: ${var.cluster-name}
+      metadataOptions:
+        httpPutResponseHopLimit: 2
+      tags:
+        karpenter.sh/discovery: ${var.cluster-name}
+        map-migrated: "migNTBAFVPHTV"
+  YAML
+
+  depends_on = [
+    helm_release.karpenter
+  ]
 }
 
 output "karpenter_iam" {
