@@ -376,7 +376,7 @@ resource "kubectl_manifest" "karpenter_node_class" {
         {
           deviceName = "/dev/xvda"
           ebs = {
-            volumeSize = "4Gi"
+            volumeSize = "20Gi"
             volumeType = local.karpenter["volumeType"]
             encrypted  = true
           }
