@@ -376,7 +376,7 @@ resource "kubectl_manifest" "karpenter_node_class" {
         {
           deviceName = "/dev/xvda"
           ebs = {
-            volumeSize = "20Gi"
+            volumeSize = local.karpenter["volumeSizeA"]
             volumeType = local.karpenter["volumeType"]
             encrypted  = true
           }
@@ -384,7 +384,7 @@ resource "kubectl_manifest" "karpenter_node_class" {
         {
           deviceName = "/dev/xvdb"
           ebs = {
-            volumeSize = local.karpenter["volumeSize"]
+            volumeSize = local.karpenter["volumeSizeB"]
             volumeType = local.karpenter["volumeType"]
             encrypted  = true
           }
