@@ -390,6 +390,17 @@ resource "kubectl_manifest" "karpenter_node_class" {
           }
         }
       ]
+      kubelet = {
+        imageGCHighThresholdPercent = 85
+        imageGCLowThresholdPercent  = 65
+        evictionMaxPodGracePeriod   = 60
+        systemReserved = {
+          ephemeral-storage = "1Gi"
+        }
+        kubeReserved = {
+          ephemeral-storage = "3Gi"
+        }
+      }
       subnetSelectorTerms = [
         {
           tags = {
