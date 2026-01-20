@@ -9,7 +9,7 @@ dependencies:
     version: 1.5.2
     repository: https://kubernetes-sigs.github.io/secrets-store-csi-driver/charts
   - name: aws-ebs-csi-driver
-    version: 2.45.1
+    version: 2.54.1
     repository: https://kubernetes-sigs.github.io/aws-ebs-csi-driver
   - name: aws-efs-csi-driver
     version: 3.2.0
@@ -18,7 +18,7 @@ dependencies:
     version: 0.1.35
     repository: https://aws.github.io/eks-charts
   - name: aws-load-balancer-controller
-    version: 1.13.3
+    version: 1.17.1
     repository: https://aws.github.io/eks-charts
   - name: aws-node-termination-handler
     version: 0.21.0
@@ -30,7 +30,7 @@ dependencies:
     version: v0.10.4
     repository: https://charts.jetstack.io
   - name: cluster-autoscaler
-    version: 9.46.6
+    version: 9.54.1
     repository: https://kubernetes.github.io/autoscaler
   - name: external-dns
     version: 1.17.0
@@ -48,7 +48,7 @@ dependencies:
     version: 1.7.2
     repository: https://charts.helm.sh/stable
   - name: karpenter
-    version: 1.5.2
+    version: 1.8.5
     repository: oci://public.ecr.aws/karpenter
   - name: keda
     version: 2.17.2
@@ -78,7 +78,7 @@ dependencies:
     version: 6.17.0
     repository: https://grafana.github.io/helm-charts
   - name: metrics-server
-    version: 3.12.2
+    version: 3.13.0
     repository: https://kubernetes-sigs.github.io/metrics-server/
   - name: node-problem-detector
     version: 2.3.14
@@ -111,7 +111,7 @@ dependencies:
     version: 7.5.3
     repository: ""
   - name: velero
-    version: 10.0.8
+    version: 11.3.2
     repository: https://vmware-tanzu.github.io/helm-charts
   - name: victoria-metrics-k8s-stack
     version: 0.55.2
