@@ -365,7 +365,7 @@ resource "kubectl_manifest" "karpenter_node_class" {
       name = "default"
     }
     spec = {
-      amiFamily        = local.karpenter["ami_family"]
+      amiFamily        = coalesce(try(length(trimspace(local.karpenter["ami_family"])) > 0 ? trimspace(local.karpenter["ami_family"]) : null, null),"Bottlerocket")
       role             = module.karpenter.node_iam_role_name
       amiSelectorTerms = [
         {
@@ -376,16 +376,16 @@ resource "kubectl_manifest" "karpenter_node_class" {
         {
           deviceName = "/dev/xvda"
           ebs = {
-            volumeSize = local.karpenter["volumeSizeA"]
-            volumeType = local.karpenter["volumeType"]
+            volumeSize = coalesce(try(local.karpenter["volumeSizeA"], null), "30Gi")
+            volumeType = coalesce(try(length(trimspace(local.karpenter["volumeType"])) > 0 ? trimspace(local.karpenter["volumeType"]) : null, null),"gp3")
             encrypted  = true
           }
         },
         {
           deviceName = "/dev/xvdb"
           ebs = {
-            volumeSize = local.karpenter["volumeSizeB"]
-            volumeType = local.karpenter["volumeType"]
+            volumeSize = coalesce(try(local.karpenter["volumeSizeB"], null), "30Gi")
+            volumeType = coalesce(try(length(trimspace(local.karpenter["volumeType"])) > 0 ? trimspace(local.karpenter["volumeType"]) : null, null),"gp3")
             encrypted  = true
           }
         }
