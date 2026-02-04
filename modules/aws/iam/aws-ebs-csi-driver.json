@@ -50,6 +50,13 @@
       "Action": [
         "ec2:CreateVolume"
       ],
+      "Resource": "arn:${arn-partition}:ec2:*:*:snapshot/*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ec2:CreateVolume"
+      ],
       "Resource": "*",
       "Condition": {
         "StringLike": {
