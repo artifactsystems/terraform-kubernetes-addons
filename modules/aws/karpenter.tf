@@ -73,6 +73,15 @@ module "karpenter" {
 
   cluster_name = var.cluster-name
 
+  iam_policy_statements = [
+    {
+      sid       = "AllowUnscopedInstanceProfileListAction"
+      effect    = "Allow"
+      actions   = ["iam:ListInstanceProfiles"]
+      resources = ["*"]
+    }
+  ]
+
   node_iam_role_additional_policies = {
     AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore",
     KarpeneterAdditional         = local.karpenter["enabled"] ? aws_iam_policy.karpenter_additional[0].arn : ""
