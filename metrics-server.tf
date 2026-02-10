@@ -15,6 +15,9 @@ locals {
   )
 
   values_metrics-server = <<VALUES
+tolerations:
+  - key: CriticalAddonsOnly
+    operator: Exists
 apiService:
   create: true
 priorityClassName: ${local.priority-class["create"] ? kubernetes_priority_class.kubernetes_addons[0].metadata[0].name : ""}

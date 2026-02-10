@@ -15,6 +15,9 @@ locals {
   )
 
   values_keda = <<VALUES
+tolerations:
+  - key: CriticalAddonsOnly
+    operator: Exists
 VALUES
 }
 

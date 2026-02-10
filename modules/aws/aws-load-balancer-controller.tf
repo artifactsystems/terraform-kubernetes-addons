@@ -20,6 +20,9 @@ locals {
   )
 
   values_aws-load-balancer-controller = <<VALUES
+tolerations:
+  - key: CriticalAddonsOnly
+    operator: Exists
 clusterName: ${var.cluster-name}
 region: ${data.aws_region.current.name}
 serviceAccount:

@@ -12,18 +12,21 @@ locals {
       create_iam_resources_irsa = true
       iam_policy_override       = null
       create_bucket             = true
-      bucket                    = "${var.cluster-name}-velero"
+      bucket                    = "${var.cluster-name}-velero-${data.aws_caller_identity.current.account_id}-${data.aws_region.current.name}"
       bucket_force_destroy      = false
       bucket_enforce_tls        = false
       allowed_cidrs             = ["0.0.0.0/0"]
       default_network_policy    = true
       kms_key_arn_access_list   = []
-      name_prefix               = "${var.cluster-name}-velero"
+      name_prefix               = "${var.cluster-name}-velero-${data.aws_caller_identity.current.account_id}-${data.aws_region.current.name}"
     },
     var.velero
   )
 
   values_velero = <<VALUES
+tolerations:
+  - key: CriticalAddonsOnly
+    operator: Exists
 metrics:
   serviceMonitor:
     enabled: ${local.kube-prometheus-stack["enabled"] || local.victoria-metrics-k8s-stack["enabled"]}

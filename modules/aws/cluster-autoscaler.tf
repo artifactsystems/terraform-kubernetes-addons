@@ -19,6 +19,9 @@ locals {
   )
 
   values_cluster-autoscaler = <<VALUES
+tolerations:
+  - key: CriticalAddonsOnly
+    operator: Exists
 nameOverride: "${local.cluster-autoscaler["name"]}"
 autoDiscovery:
   clusterName: ${var.cluster-name}
